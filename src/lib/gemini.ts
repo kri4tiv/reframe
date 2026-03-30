@@ -62,24 +62,14 @@ Generate the recomposed image now at exactly ${spec.w}×${spec.h}px.`
 
     try {
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            system_instruction: { parts: [{ text: REFRAME_SYSTEM_PROMPT }] },
-            contents: [
-              {
-                role: 'user',
-                parts: [
-                  { inline_data: { mime_type: mimeType, data: imageBase64 } },
-                  { text: prompt },
-                ],
-              },
-            ],
-            generation_config: {
-              response_modalities: ['image', 'text'],
-            },
+            prompt,
+            number_of_images: 1,
+            aspect_ratio: spec.ratio,
           }),
         }
       )
@@ -91,14 +81,7 @@ Generate the recomposed image now at exactly ${spec.w}×${spec.h}px.`
 
       const data = await response.json()
 
-      // Extract image from response parts
-      let imageData: string | null = null
-      for (const part of data?.candidates?.[0]?.content?.parts || []) {
-        if (part.inline_data?.mime_type?.startsWith('image/')) {
-          imageData = part.inline_data.data
-          break
-        }
-      }
+      const imageData: string | null = data?.predictions?.[0]?.bytesBase64Encoded ?? null
 
       if (!imageData) throw new Error('No image returned for format ' + format)
 
