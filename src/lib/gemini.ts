@@ -62,7 +62,7 @@ Generate the recomposed image now at exactly ${spec.w}×${spec.h}px.`
 
     try {
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${apiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -78,10 +78,7 @@ Generate the recomposed image now at exactly ${spec.w}×${spec.h}px.`
               },
             ],
             generation_config: {
-              response_modalities: ['IMAGE', 'TEXT'],
-              image_config: {
-                image_size: `${spec.w}x${spec.h}`,
-              },
+              response_modalities: ['image', 'text'],
             },
           }),
         }
