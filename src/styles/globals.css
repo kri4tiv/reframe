@@ -1,0 +1,252 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Gotham via Google Fonts fallback (Montserrat) + local if available ─── */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@font-face {
+  font-family: 'Gotham';
+  src: url('/fonts/Gotham-Book.woff2') format('woff2');
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Gotham';
+  src: url('/fonts/Gotham-Medium.woff2') format('woff2');
+  font-weight: 500; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Gotham';
+  src: url('/fonts/Gotham-Bold.woff2') format('woff2');
+  font-weight: 700; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Gotham';
+  src: url('/fonts/Gotham-Black.woff2') format('woff2');
+  font-weight: 900; font-style: normal; font-display: swap;
+}
+
+/* ── CSS Variables ─────────────────────────────────────────────────── */
+:root {
+  --ink:          #0C0C0C;
+  --paper:        #F7F6F2;
+  --dim:          #1A1A1A;
+  --muted:        #6B6B6B;
+  --border:       #E2E1DC;
+  --accent:       #FF4D00;
+  --accent-light: #FF6B2B;
+  --surface:      #FFFFFF;
+  --surface-2:    #F2F1ED;
+  --font:         'Gotham', 'Montserrat', sans-serif;
+  --radius:       6px;
+  --radius-lg:    12px;
+}
+
+/* ── Base ──────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.6;
+  min-height: 100dvh;
+}
+
+::selection { background: var(--accent); color: #fff; }
+
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* ── Typography ────────────────────────────────────────────────────── */
+.display {
+  font-family: var(--font);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ── Buttons ───────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  border-radius: var(--radius);
+  padding: 0 20px;
+  height: 42px;
+}
+
+.btn-primary {
+  background: var(--ink);
+  color: var(--paper);
+}
+.btn-primary:hover:not(:disabled) { background: var(--dim); transform: translateY(-1px); }
+.btn-primary:active:not(:disabled) { transform: translateY(0); }
+
+.btn-accent {
+  background: var(--accent);
+  color: #fff;
+}
+.btn-accent:hover:not(:disabled) { background: var(--accent-light); transform: translateY(-1px); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--border);
+}
+.btn-ghost:hover:not(:disabled) { border-color: var(--ink); background: var(--surface-2); }
+
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-lg { height: 52px; font-size: 14px; padding: 0 28px; }
+.btn-sm { height: 34px; font-size: 12px; padding: 0 14px; }
+
+/* ── Inputs ────────────────────────────────────────────────────────── */
+.input {
+  width: 100%;
+  height: 44px;
+  padding: 0 14px;
+  font-family: var(--font);
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  outline: none;
+}
+.input:hover { border-color: #C5C4C0; }
+.input:focus { border-color: var(--ink); box-shadow: 0 0 0 3px rgba(12,12,12,0.06); }
+.input::placeholder { color: #B0AFAB; }
+
+.input-error { border-color: #E53E3E !important; }
+.error-text { font-size: 12px; color: #E53E3E; margin-top: 5px; }
+
+/* ── Cards ─────────────────────────────────────────────────────────── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+/* ── Upload zone ───────────────────────────────────────────────────── */
+.upload-zone {
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius-lg);
+  transition: border-color 0.2s, background 0.2s;
+  cursor: pointer;
+}
+.upload-zone:hover, .upload-zone.active {
+  border-color: var(--accent);
+  background: rgba(255,77,0,0.02);
+}
+
+/* ── Format pill ───────────────────────────────────────────────────── */
+.format-pill {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.format-pill:hover { border-color: var(--ink); }
+.format-pill.selected {
+  border-color: var(--accent);
+  background: rgba(255,77,0,0.04);
+}
+
+/* ── Generation shimmer ────────────────────────────────────────────── */
+.shimmer {
+  background: linear-gradient(90deg, var(--surface-2) 0%, var(--border) 50%, var(--surface-2) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* ── Free badge ────────────────────────────────────────────────────── */
+.free-badge {
+  background: #FFF4F0;
+  color: var(--accent);
+  border: 1px solid #FFD5C5;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 3px 10px;
+}
+
+/* ── Divider ───────────────────────────────────────────────────────── */
+.divider { height: 1px; background: var(--border); }
+
+/* ── Nav ───────────────────────────────────────────────────────────── */
+.nav-link {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.nav-link:hover { color: var(--ink); }
+
+/* ── Tooltip ───────────────────────────────────────────────────────── */
+.tooltip {
+  position: relative;
+}
+.tooltip::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--dim);
+  color: var(--paper);
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.tooltip:hover::after { opacity: 1; }
+
+/* ── Result preview frame ──────────────────────────────────────────── */
+.result-frame {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  position: relative;
+}
+.result-frame img { width: 100%; height: 100%; object-fit: contain; display: block; }
+
+/* ── Dot loader ────────────────────────────────────────────────────── */
+.dot-loader { display: flex; gap: 5px; align-items: center; }
+.dot-loader span {
+  width: 6px; height: 6px;
+  background: var(--accent);
+  border-radius: 50%;
+  animation: pulseDot 1.4s ease-in-out infinite;
+}
+.dot-loader span:nth-child(2) { animation-delay: 0.2s; }
+.dot-loader span:nth-child(3) { animation-delay: 0.4s; }
