@@ -93,7 +93,7 @@ export default function DashboardPage() {
     <div style={{ minHeight: '100dvh', background: 'var(--paper)', fontFamily: 'var(--font)', color: 'var(--ink)' }}>
 
       {/* ── Nav ── */}
-      <nav style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(247,246,242,0.95)', backdropFilter: 'blur(12px)', borderBottom: '1px solid var(--border)', padding: '0 40px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <nav style={{ position: 'sticky', top: 0, zIndex: 50, background: 'var(--paper)', backdropFilter: 'blur(12px)', borderBottom: '1px solid var(--border)', padding: '0 40px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Link href="/" style={{ textDecoration: 'none', fontWeight: 900, fontSize: '15px', letterSpacing: '-0.02em', color: 'var(--ink)' }}>REFRAME</Link>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <Link href="/generate" style={{ textDecoration: 'none' }}>
@@ -309,7 +309,7 @@ export default function DashboardPage() {
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
                   <span style={{ color: 'var(--muted)' }}>Member since</span>
-                  <span style={{ fontWeight: 500 }}>{profile?.createdAt ? formatDate(profile.createdAt) : '—'}</span>
+                  <span style={{ fontWeight: 500 }}>{profile?.createdAt ? formatDate(profile.createdAt) : '-'}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', padding: '8px 0' }}>
                   <span style={{ color: 'var(--muted)' }}>Total generations</span>

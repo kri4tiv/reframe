@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import '../styles/globals.css'
 
 export const metadata: Metadata = {
-  title: 'Reframe — AI Creative Recomposition',
+  title: 'Reframe - AI Creative Recomposition',
   description: 'One image. Every format. AI-powered recomposition for marketing teams.',
   openGraph: {
     title: 'Reframe',

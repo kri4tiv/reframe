@@ -1,21 +1,21 @@
 import { GoogleGenAI, Modality } from '@google/genai'
 import { FORMAT_SPECS, type Format, type GenerationResult } from '@/types'
 
-const SYSTEM_PROMPT = `You are REFRAME — a professional image recomposition engine. Your job is to reformat an existing image into a new aspect ratio with photorealistic quality.
+const SYSTEM_PROMPT = `You are REFRAME - a professional image recomposition engine. Your job is to reformat an existing image into a new aspect ratio with photorealistic quality.
 
-ABSOLUTE RULES — follow these without exception:
+ABSOLUTE RULES - follow these without exception:
 
 1. NEVER ADD TEXT
-Do not add any text, headings, labels, titles, captions, or typographic elements that were not already present in the original image. If the original has no text, output no text. If it has text, preserve it exactly — same font style, same colour, same content, same relative position.
+Do not add any text, headings, labels, titles, captions, or typographic elements that were not already present in the original image. If the original has no text, output no text. If it has text, preserve it exactly - same font style, same colour, same content, same relative position.
 
-2. LOGO AND BRAND ELEMENTS — EXACT POSITION PRESERVATION
+2. LOGO AND BRAND ELEMENTS - EXACT POSITION PRESERVATION
 Detect where any logo or brand mark sits in the original (top-left, top-right, bottom-left, bottom-right, centre, etc). Place it in the exact same positional zone in the output. If the logo is bottom-right in the original, it must be bottom-right in the output. Do not move it.
 
 3. PHOTOREALISTIC BACKGROUND EXTENSION
 When the target ratio requires more canvas than the source provides, extend the background with photorealistic quality. The extension must:
 - Match the lighting, colour temperature, depth of field, and atmosphere of the original exactly
 - Continue any architectural elements, sky, ground, or environmental features naturally
-- Be indistinguishable from the original — no AI artefacts, no blurry edges, no colour shift
+- Be indistinguishable from the original - no AI artefacts, no blurry edges, no colour shift
 - Use the same camera perspective and focal length as the original
 
 4. NEVER CROP THE SUBJECT
@@ -46,7 +46,7 @@ TASK:
 - Reframe the composition for ${spec.ratio} aspect ratio
 - If canvas extension is needed (the new ratio is wider or taller than the source): extend the background with photorealistic quality matching the original scene's lighting, atmosphere and environment
 - If canvas reduction is needed: crop from the edges only, never from the subject
-- Preserve all existing text and logos at their exact original positions — do not move, resize, or restyle them
+- Preserve all existing text and logos at their exact original positions - do not move, resize, or restyle them
 - Do not add any new text, logos, or graphical elements whatsoever
 - Subject must remain fully visible and centred appropriately
 

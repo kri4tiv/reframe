@@ -13,7 +13,7 @@ const FORMATS = [
 const STEPS = [
   { n: '01', title: 'Upload your creative', body: 'Drop any ad, banner, or campaign image. JPG, PNG, WebP up to 15MB.' },
   { n: '02', title: 'Pick your formats',    body: 'Select one or multiple output formats. We handle up to 6 at once.' },
-  { n: '03', title: 'Reframe generates',   body: 'AI analyses your composition — headings, logos, subjects — and recomposes each format with design logic.' },
+  { n: '03', title: 'Reframe generates',   body: 'AI analyses your composition - headings, logos, subjects - and recomposes each format with design logic.' },
   { n: '04', title: 'Download your pack',  body: 'Preview all outputs. Download individually or as a ZIP with correct naming conventions.' },
 ]
 
@@ -39,7 +39,7 @@ export default function LandingPage() {
     <div style={{ minHeight: '100dvh', background: 'var(--paper)', color: 'var(--ink)', fontFamily: 'var(--font)' }}>
 
       {/* ── Nav ── */}
-      <nav style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(247,246,242,0.92)', backdropFilter: 'blur(12px)', borderBottom: '1px solid var(--border)', padding: '0 40px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <nav style={{ position: 'sticky', top: 0, zIndex: 50, background: 'var(--paper)', backdropFilter: 'blur(12px)', borderBottom: '1px solid var(--border)', padding: '0 40px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{ fontWeight: 900, fontSize: '15px', letterSpacing: '-0.02em' }}>REFRAME</span>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <button
@@ -76,7 +76,7 @@ export default function LandingPage() {
         </h1>
 
         <p style={{ fontSize: '18px', color: 'var(--muted)', maxWidth: '520px', lineHeight: 1.7, marginBottom: '40px' }}>
-          AI-powered recomposition for marketing teams. Upload a creative, select your formats — Reframe handles the rest with real design logic.
+          AI-powered recomposition for marketing teams. Upload a creative, select your formats - Reframe handles the rest with real design logic.
         </p>
 
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>

@@ -141,7 +141,7 @@ export default function GeneratePage() {
     <div style={{ minHeight: '100dvh', background: 'var(--paper)', fontFamily: 'var(--font)', color: 'var(--ink)' }}>
 
       {/* ── Nav ── */}
-      <nav style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(247,246,242,0.95)', backdropFilter: 'blur(12px)', borderBottom: '1px solid var(--border)', padding: '0 40px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <nav style={{ position: 'sticky', top: 0, zIndex: 50, background: 'var(--paper)', backdropFilter: 'blur(12px)', borderBottom: '1px solid var(--border)', padding: '0 40px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Link href="/" style={{ textDecoration: 'none', fontWeight: 900, fontSize: '15px', letterSpacing: '-0.02em', color: 'var(--ink)' }}>REFRAME</Link>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           {gensRemaining !== null && (
@@ -259,7 +259,7 @@ export default function GeneratePage() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: showApiKey ? '12px' : '0' }}>
                     <div>
                       <p style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: '2px' }}>Gemini API Key</p>
-                      <p style={{ fontSize: '11px', color: 'var(--muted)' }}>Optional — we'll use our demo key for your first 3 gens</p>
+                      <p style={{ fontSize: '11px', color: 'var(--muted)' }}>Optional - we'll use our demo key for your first 3 gens</p>
                     </div>
                     <button className="btn btn-ghost btn-sm" onClick={() => setShowApiKey(s => !s)}>
                       {showApiKey ? 'Hide' : 'Add key'}
@@ -381,14 +381,14 @@ export default function GeneratePage() {
           <div style={{ animation: 'fadeUp 0.4s ease forwards' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px', flexWrap: 'wrap', gap: '16px' }}>
               <div>
-                <p className="label" style={{ marginBottom: '6px' }}>RESULTS — {results.length} FORMAT{results.length > 1 ? 'S' : ''}</p>
+                <p className="label" style={{ marginBottom: '6px' }}>RESULTS - {results.length} FORMAT{results.length > 1 ? 'S' : ''}</p>
                 <p style={{ fontSize: '13px', color: 'var(--muted)' }}>Click any image to preview or download</p>
               </div>
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button className="btn btn-ghost" onClick={reset}>New image</button>
                 <button className="btn btn-primary" onClick={downloadAll}>
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v9M4 7l3 3 3-3M1 12h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
-                  Download all — ZIP
+                  Download all - ZIP
                 </button>
               </div>
             </div>

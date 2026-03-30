@@ -50,25 +50,6 @@ export function checkRateLimit(key: string, max: number, windowMs: number): bool
   return true
 }
 
-// ─── hCaptcha Verification ─────────────────────────────────────────
-export async function verifyCaptcha(token: string): Promise<boolean> {
-  if (process.env.NODE_ENV === 'development' && token === 'test') return true
-  try {
-    const res = await fetch('https://hcaptcha.com/siteverify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        secret:   process.env.HCAPTCHA_SECRET_KEY!,
-        response: token,
-      }),
-    })
-    const data = await res.json()
-    return data.success === true
-  } catch {
-    return false
-  }
-}
-
 // ─── Input sanitisation ────────────────────────────────────────────
 export function sanitizeEmail(email: string): string {
   return email.toLowerCase().trim().slice(0, 254)
