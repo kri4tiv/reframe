@@ -19,10 +19,21 @@ const STEPS = [
 
 export default function LandingPage() {
   const [tick, setTick] = useState(0)
+  const [dark, setDark] = useState(false)
+
   useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), 2000)
     return () => clearInterval(id)
   }, [])
+
+  useEffect(() => {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+    setDark(prefersDark)
+  }, [])
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light')
+  }, [dark])
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--paper)', color: 'var(--ink)', fontFamily: 'var(--font)' }}>
@@ -31,6 +42,18 @@ export default function LandingPage() {
       <nav style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(247,246,242,0.92)', backdropFilter: 'blur(12px)', borderBottom: '1px solid var(--border)', padding: '0 40px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{ fontWeight: 900, fontSize: '15px', letterSpacing: '-0.02em' }}>REFRAME</span>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <button
+            onClick={() => setDark(d => !d)}
+            className="btn btn-ghost btn-sm"
+            style={{ width: '34px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            title={dark ? 'Light mode' : 'Dark mode'}
+          >
+            {dark ? (
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="3" stroke="currentColor" strokeWidth="1.3"/><path d="M7 1v1M7 12v1M1 7h1M12 7h1M2.5 2.5l.7.7M10.8 10.8l.7.7M10.8 2.5l-.7.7M3.2 10.8l-.7.7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M12 7.5A5.5 5.5 0 0 1 6.5 2a5.5 5.5 0 1 0 5.5 5.5z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/></svg>
+            )}
+          </button>
           <Link href="/login" style={{ textDecoration: 'none' }}>
             <button className="btn btn-ghost btn-sm">Sign in</button>
           </Link>

@@ -1,24 +1,31 @@
 import { GoogleGenAI, Modality } from '@google/genai'
 import { FORMAT_SPECS, type Format, type GenerationResult } from '@/types'
 
-const SYSTEM_PROMPT = `You are REFRAME — an intelligent creative recomposition engine for marketing teams.
+const SYSTEM_PROMPT = `You are REFRAME — a professional image recomposition engine. Your job is to reformat an existing image into a new aspect ratio with photorealistic quality.
 
-Your job: take the uploaded image and recompose it perfectly for the target aspect ratio. Think like a senior art director.
+ABSOLUTE RULES — follow these without exception:
 
-RULES:
-1. HEADINGS ARE SACRED — any text/headline must remain fully legible. Never crop it. Reposition to the strongest zone for the new format.
-2. EXTEND BEFORE CROPPING — when the target needs more canvas, extend the background seamlessly. Never stretch or warp content.
-3. CHARACTER QUALITY — all people, products, logos stay whole and undistorted.
-4. HEADING PLACEMENT BY FORMAT:
-   - 9:16 Story: heading upper third, logo bottom-centre
-   - 1:1 Square: heading centre or lower half, logo bottom-right
-   - 3:4 Portrait: heading upper third, logo bottom-right
-   - 4:3 Landscape: heading left zone vertically centred, logo bottom-right
-   - 16:9 Widescreen: heading left zone vertically centred, logo bottom-right
-   - 21:9 Ultrawide: heading left third vertically centred, logo right side
-5. PREMIUM OUTPUT — generous padding, clean composition, no crowding.
+1. NEVER ADD TEXT
+Do not add any text, headings, labels, titles, captions, or typographic elements that were not already present in the original image. If the original has no text, output no text. If it has text, preserve it exactly — same font style, same colour, same content, same relative position.
 
-Output the recomposed image at exactly the target dimensions. High quality. Ready to use.`
+2. LOGO AND BRAND ELEMENTS — EXACT POSITION PRESERVATION
+Detect where any logo or brand mark sits in the original (top-left, top-right, bottom-left, bottom-right, centre, etc). Place it in the exact same positional zone in the output. If the logo is bottom-right in the original, it must be bottom-right in the output. Do not move it.
+
+3. PHOTOREALISTIC BACKGROUND EXTENSION
+When the target ratio requires more canvas than the source provides, extend the background with photorealistic quality. The extension must:
+- Match the lighting, colour temperature, depth of field, and atmosphere of the original exactly
+- Continue any architectural elements, sky, ground, or environmental features naturally
+- Be indistinguishable from the original — no AI artefacts, no blurry edges, no colour shift
+- Use the same camera perspective and focal length as the original
+
+4. NEVER CROP THE SUBJECT
+The primary subject (person, product, object) must remain fully visible and intact in all outputs. Centre the subject appropriately for the format.
+
+5. NO HALLUCINATION
+Do not add people, objects, products, shadows, reflections, or any element that was not in the original image. Only extend what is already there.
+
+6. OUTPUT QUALITY
+Output must be high resolution, sharp, and indistinguishable from a professionally recomposed image. No compression artefacts, no blurring, no visible seams at extension boundaries.`
 
 export async function recomposeImage(
   imageBase64: string,
@@ -33,15 +40,24 @@ export async function recomposeImage(
   for (const format of targetFormats) {
     const spec = FORMAT_SPECS[format]
 
-    const prompt = `${SYSTEM_PROMPT}
+    const prompt = `Recompose this image into ${spec.label} format (${spec.ratio}, exactly ${spec.w}×${spec.h}px).
 
-Recompose this image for ${spec.label} format (${spec.ratio}, ${spec.w}×${spec.h}px).
-Use case: ${spec.platform}
+TASK:
+- Reframe the composition for ${spec.ratio} aspect ratio
+- If canvas extension is needed (the new ratio is wider or taller than the source): extend the background with photorealistic quality matching the original scene's lighting, atmosphere and environment
+- If canvas reduction is needed: crop from the edges only, never from the subject
+- Preserve all existing text and logos at their exact original positions — do not move, resize, or restyle them
+- Do not add any new text, logos, or graphical elements whatsoever
+- Subject must remain fully visible and centred appropriately
 
-Apply the correct heading placement for ${spec.ratio}. Extend the background if needed. Output at exactly ${spec.w}×${spec.h}px.`
+Output a single high-quality image at exactly ${spec.w}×${spec.h}px. Nothing else.`
 
     const response = await ai.models.generateContent({
       model: 'gemini-3.1-flash-image-preview',
+      config: {
+        systemInstruction: SYSTEM_PROMPT,
+        responseModalities: [Modality.TEXT, Modality.IMAGE],
+      },
       contents: [
         {
           role: 'user',
@@ -56,9 +72,6 @@ Apply the correct heading placement for ${spec.ratio}. Extend the background if 
           ],
         },
       ],
-      config: {
-        responseModalities: [Modality.TEXT, Modality.IMAGE],
-      },
     })
 
     let imageData: string | null = null

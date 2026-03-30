@@ -42,6 +42,44 @@
   --radius-lg:    12px;
 }
 
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:          #F0EFE9;
+    --paper:        #0F0F0F;
+    --dim:          #1A1A1A;
+    --muted:        #888880;
+    --border:       #2A2A2A;
+    --accent:       #FF4D00;
+    --accent-light: #FF6B2B;
+    --surface:      #161616;
+    --surface-2:    #1E1E1E;
+  }
+}
+
+[data-theme="dark"] {
+  --ink:          #F0EFE9;
+  --paper:        #0F0F0F;
+  --dim:          #1A1A1A;
+  --muted:        #888880;
+  --border:       #2A2A2A;
+  --accent:       #FF4D00;
+  --accent-light: #FF6B2B;
+  --surface:      #161616;
+  --surface-2:    #1E1E1E;
+}
+
+[data-theme="light"] {
+  --ink:          #0C0C0C;
+  --paper:        #F7F6F2;
+  --dim:          #1A1A1A;
+  --muted:        #6B6B6B;
+  --border:       #E2E1DC;
+  --accent:       #FF4D00;
+  --accent-light: #FF6B2B;
+  --surface:      #FFFFFF;
+  --surface-2:    #F2F1ED;
+}
+
 /* ── Base ──────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 

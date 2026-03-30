@@ -1,5 +1,5 @@
 'use client'
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import JSZip from 'jszip'
 import { FORMAT_SPECS, type Format, type GenerationResult } from '@/types'
@@ -29,10 +29,29 @@ export default function GeneratePage() {
   const [error,          setError]         = useState('')
   const [gensRemaining,  setGensRemaining] = useState<number | null>(null)
   const [genStep,        setGenStep]       = useState(0)
+  const [previewModal,   setPreviewModal]  = useState<GenerationResult | null>(null)
+  const [dark,           setDark]          = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const isDragging   = useRef(false)
 
-  const GEN_STEPS = ['Uploading image...', 'Analysing composition...', 'Detecting headings & subjects...', `Recomposing ${selected.size} format${selected.size > 1 ? 's' : ''}...`, 'Finalising outputs...']
+  // CHANGE 6 — dynamic GEN_STEPS based on selected formats
+  const GEN_STEPS = [
+    'Uploading image...',
+    'Analysing composition...',
+    'Detecting subjects, logos and text...',
+    ...Array.from(selected).map((f) => `Recomposing ${f}...`),
+    'Packaging outputs...',
+  ]
+
+  // CHANGE 5 — dark mode effects
+  useEffect(() => {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+    setDark(prefersDark)
+  }, [])
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light')
+  }, [dark])
 
   const handleFile = useCallback((f: File) => {
     if (!f.type.startsWith('image/')) { setError('Please upload an image file'); return }
@@ -131,6 +150,19 @@ export default function GeneratePage() {
           {stage !== 'upload' && (
             <button className="btn btn-ghost btn-sm" onClick={reset}>New image</button>
           )}
+          {/* CHANGE 5 — dark mode toggle */}
+          <button
+            onClick={() => setDark(d => !d)}
+            className="btn btn-ghost btn-sm"
+            style={{ width: '34px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            title={dark ? 'Light mode' : 'Dark mode'}
+          >
+            {dark ? (
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="3" stroke="currentColor" strokeWidth="1.3"/><path d="M7 1v1M7 12v1M1 7h1M12 7h1M2.5 2.5l.7.7M10.8 10.8l.7.7M10.8 2.5l-.7.7M3.2 10.8l-.7.7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M12 7.5A5.5 5.5 0 0 1 6.5 2a5.5 5.5 0 1 0 5.5 5.5z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/></svg>
+            )}
+          </button>
           <Link href="/signup" style={{ textDecoration: 'none' }}>
             <button className="btn btn-primary btn-sm">Sign up</button>
           </Link>
@@ -265,28 +297,79 @@ export default function GeneratePage() {
           </div>
         )}
 
-        {/* ── GENERATING ── */}
+        {/* ── GENERATING — CHANGE 3 ── */}
         {stage === 'generating' && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '80px 0', animation: 'fadeIn 0.3s ease forwards' }}>
+
+            {/* Source image with corner marks */}
             <div style={{ position: 'relative', width: '120px', height: '90px', marginBottom: '40px' }}>
-              <div style={{ width: '100%', height: '100%', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden', position: 'relative', background: 'var(--ink)' }}>
-                {previewUrl && <img src={previewUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.5 }} />}
-                <div style={{ position: 'absolute', left: 0, right: 0, height: '1px', background: 'linear-gradient(90deg, transparent, var(--accent), transparent)', animation: 'shimmer 1.5s infinite', backgroundSize: '200% 100%' }} />
+              <div style={{ width: '100%', height: '100%', borderRadius: '6px', overflow: 'hidden', background: 'var(--dim)' }}>
+                {previewUrl && <img src={previewUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.6 }} />}
               </div>
-              {/* Corner marks */}
-              {[['0','0','top','left'],['0','auto','top','right'],['auto','0','bottom','left'],['auto','auto','bottom','right']].map(([t,b,tv,lv],i) => (
-                <div key={i} style={{ position: 'absolute', [tv]: '-2px', [lv === 'left' ? 'left' : 'right']: '-2px', width: '8px', height: '8px', borderTop: tv === 'top' ? '2px solid var(--accent)' : 'none', borderBottom: tv === 'bottom' ? '2px solid var(--accent)' : 'none', borderLeft: lv === 'left' ? '2px solid var(--accent)' : 'none', borderRight: lv === 'right' ? '2px solid var(--accent)' : 'none' }} />
+              {[['top','left'],['top','right'],['bottom','left'],['bottom','right']].map(([v,h]) => (
+                <div key={v+h} style={{ position: 'absolute', [v]: '-3px', [h]: '-3px', width: '10px', height: '10px',
+                  borderTop: v === 'top' ? '2px solid var(--accent)' : 'none',
+                  borderBottom: v === 'bottom' ? '2px solid var(--accent)' : 'none',
+                  borderLeft: h === 'left' ? '2px solid var(--accent)' : 'none',
+                  borderRight: h === 'right' ? '2px solid var(--accent)' : 'none',
+                }} />
               ))}
             </div>
 
-            <p style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: '12px' }}>REFRAMING</p>
-            <p style={{ fontSize: '16px', fontWeight: 500, marginBottom: '36px', minHeight: '24px' }}>{GEN_STEPS[genStep]}</p>
+            <p style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: '10px' }}>
+              REFRAMING {selected.size} FORMAT{selected.size > 1 ? 'S' : ''}
+            </p>
 
+            <p style={{ fontSize: '15px', fontWeight: 500, marginBottom: '8px', color: 'var(--ink)' }}>
+              {GEN_STEPS[genStep]}
+            </p>
+
+            {/* Time estimate */}
+            <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '32px' }}>
+              Est. {Math.round(selected.size * 18)}–{Math.round(selected.size * 28)}s remaining
+            </p>
+
+            {/* Progress bar */}
+            <div style={{ width: '100%', maxWidth: '360px', marginBottom: '32px' }}>
+              <div style={{ height: '3px', background: 'var(--border)', borderRadius: '999px', overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%',
+                  borderRadius: '999px',
+                  background: 'var(--accent)',
+                  width: `${Math.round((genStep / (GEN_STEPS.length - 1)) * 100)}%`,
+                  transition: 'width 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+                }} />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px' }}>
+                <span style={{ fontSize: '11px', color: 'var(--muted)' }}>Analysing</span>
+                <span style={{ fontSize: '11px', color: 'var(--muted)' }}>{Math.round((genStep / (GEN_STEPS.length - 1)) * 100)}%</span>
+                <span style={{ fontSize: '11px', color: 'var(--muted)' }}>Done</span>
+              </div>
+            </div>
+
+            {/* Step list */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', maxWidth: '320px' }}>
               {GEN_STEPS.map((step, i) => (
                 <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                  <div style={{ width: '6px', height: '6px', flexShrink: 0, background: i <= genStep ? 'var(--accent)' : 'var(--border)', borderRadius: '50%', transition: 'background 0.3s' }} />
-                  <span style={{ fontSize: '12px', color: i <= genStep ? 'var(--ink)' : 'var(--muted)', transition: 'color 0.3s' }}>{step}</span>
+                  <div style={{
+                    width: '18px', height: '18px', borderRadius: '50%', flexShrink: 0,
+                    border: `1.5px solid ${i < genStep ? 'var(--accent)' : i === genStep ? 'var(--accent)' : 'var(--border)'}`,
+                    background: i < genStep ? 'var(--accent)' : 'transparent',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'all 0.3s',
+                  }}>
+                    {i < genStep && (
+                      <svg width="8" height="6" viewBox="0 0 8 6" fill="none">
+                        <path d="M1 3l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    )}
+                    {i === genStep && (
+                      <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--accent)', animation: 'pulseDot 1.4s ease-in-out infinite' }} />
+                    )}
+                  </div>
+                  <span style={{ fontSize: '12px', color: i <= genStep ? 'var(--ink)' : 'var(--muted)', transition: 'color 0.3s', fontWeight: i === genStep ? 500 : 400 }}>
+                    {step}
+                  </span>
                 </div>
               ))}
             </div>
@@ -299,7 +382,7 @@ export default function GeneratePage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px', flexWrap: 'wrap', gap: '16px' }}>
               <div>
                 <p className="label" style={{ marginBottom: '6px' }}>RESULTS — {results.length} FORMAT{results.length > 1 ? 'S' : ''}</p>
-                <p style={{ fontSize: '13px', color: 'var(--muted)' }}>Click any image to download individually</p>
+                <p style={{ fontSize: '13px', color: 'var(--muted)' }}>Click any image to preview or download</p>
               </div>
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button className="btn btn-ghost" onClick={reset}>New image</button>
@@ -310,29 +393,68 @@ export default function GeneratePage() {
               </div>
             </div>
 
+            {/* CHANGE 4 — Preview Modal */}
+            {previewModal && (
+              <div
+                onClick={() => setPreviewModal(null)}
+                style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
+              >
+                <div onClick={e => e.stopPropagation()} style={{ background: 'var(--surface)', borderRadius: '12px', overflow: 'hidden', maxWidth: '90vw', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'baseline' }}>
+                      <span style={{ fontWeight: 700, fontSize: '15px' }}>{previewModal.ratio}</span>
+                      <span style={{ fontSize: '12px', color: 'var(--muted)' }}>{previewModal.px}</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button className="btn btn-primary btn-sm" onClick={() => downloadSingle(previewModal)}>Download PNG</button>
+                      <button className="btn btn-ghost btn-sm" onClick={() => setPreviewModal(null)}>✕</button>
+                    </div>
+                  </div>
+                  <div style={{ overflow: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface-2)', minHeight: '200px' }}>
+                    <img src={previewModal.dataUrl} alt={previewModal.ratio} style={{ maxWidth: '100%', maxHeight: '75vh', objectFit: 'contain', display: 'block' }} />
+                  </div>
+                  <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border)' }}>
+                    <p style={{ fontSize: '11px', color: 'var(--muted)', fontFamily: 'monospace' }}>{previewModal.filename}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* CHANGE 4 — Results Grid */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
               {results.map(r => (
-                <div
-                  key={r.slug}
-                  onClick={() => downloadSingle(r)}
-                  className="card"
-                  style={{ cursor: 'pointer', overflow: 'hidden', transition: 'transform 0.15s, border-color 0.15s' }}
+                <div key={r.slug} className="card" style={{ overflow: 'hidden', transition: 'transform 0.15s, border-color 0.15s' }}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--ink)' }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)' }}
                 >
-                  <div style={{ background: 'var(--ink)', aspectRatio: String(FORMAT_SPECS[r.ratio].w / FORMAT_SPECS[r.ratio].h), display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                  {/* Image */}
+                  <div style={{ background: 'var(--dim)', aspectRatio: String(FORMAT_SPECS[r.ratio].w / FORMAT_SPECS[r.ratio].h), overflow: 'hidden', position: 'relative' }}>
                     <img src={r.dataUrl} alt={r.ratio} style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
+                    {/* Hover overlay */}
+                    <div className="result-hover-overlay" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0)', display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }}
+                      onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.5)'}
+                      onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0)'}
+                    >
+                      <button className="btn btn-primary btn-sm" style={{ opacity: 0, transition: 'opacity 0.2s' }}
+                        onMouseEnter={e => { const p = (e.currentTarget as HTMLElement).parentElement; if(p) Array.from(p.querySelectorAll('button')).forEach((b: Element) => (b as HTMLElement).style.opacity = '1') }}
+                        onClick={e => { e.stopPropagation(); setPreviewModal(r) }}>Preview</button>
+                      <button className="btn btn-ghost btn-sm" style={{ opacity: 0, transition: 'opacity 0.2s', background: 'rgba(255,255,255,0.9)' }}
+                        onMouseEnter={e => { const p = (e.currentTarget as HTMLElement).parentElement; if(p) Array.from(p.querySelectorAll('button')).forEach((b: Element) => (b as HTMLElement).style.opacity = '1') }}
+                        onClick={e => { e.stopPropagation(); downloadSingle(r) }}>Download</button>
+                    </div>
                   </div>
+                  {/* Info */}
                   <div style={{ padding: '12px 14px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                       <span style={{ fontWeight: 700, fontSize: '13px' }}>{r.ratio}</span>
-                      <span style={{ fontSize: '10px', color: 'var(--muted)', letterSpacing: '0.06em' }}>{r.px}</span>
+                      <span style={{ fontSize: '10px', color: 'var(--muted)' }}>{r.px}</span>
                     </div>
                     <p style={{ fontSize: '11px', color: 'var(--muted)', wordBreak: 'break-all' }}>{r.filename}</p>
                   </div>
-                  <div style={{ padding: '8px 14px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M5.5 1v7M3 5l2.5 3 2.5-3M1 10h9" stroke="var(--muted)" strokeWidth="1.2" strokeLinecap="round"/></svg>
-                    <span style={{ fontSize: '10px', color: 'var(--muted)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Download PNG</span>
+                  {/* Actions */}
+                  <div style={{ padding: '8px 14px', borderTop: '1px solid var(--border)', display: 'flex', gap: '8px' }}>
+                    <button className="btn btn-ghost btn-sm" style={{ flex: 1, fontSize: '11px' }} onClick={() => setPreviewModal(r)}>Preview</button>
+                    <button className="btn btn-primary btn-sm" style={{ flex: 1, fontSize: '11px' }} onClick={() => downloadSingle(r)}>Download</button>
                   </div>
                 </div>
               ))}
