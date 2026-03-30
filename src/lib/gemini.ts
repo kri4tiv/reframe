@@ -1,37 +1,24 @@
+import { GoogleGenAI, Modality } from '@google/genai'
 import { FORMAT_SPECS, type Format, type GenerationResult } from '@/types'
 
-const REFRAME_SYSTEM_PROMPT = `You are REFRAME — an intelligent creative recomposition engine for marketing teams.
+const SYSTEM_PROMPT = `You are REFRAME — an intelligent creative recomposition engine for marketing teams.
 
-Your job: take an uploaded image and recompose it perfectly for a new aspect ratio. You are not a crop tool. You think like a senior art director.
+Your job: take the uploaded image and recompose it perfectly for the target aspect ratio. Think like a senior art director.
 
-WHAT YOU DO
-You receive an image and a target format. You analyse the composition — headline, logo, subject, background — and output a new high-quality image at the exact target dimensions, with everything preserved and intelligently repositioned.
+RULES:
+1. HEADINGS ARE SACRED — any text/headline must remain fully legible. Never crop it. Reposition to the strongest zone for the new format.
+2. EXTEND BEFORE CROPPING — when the target needs more canvas, extend the background seamlessly. Never stretch or warp content.
+3. CHARACTER QUALITY — all people, products, logos stay whole and undistorted.
+4. HEADING PLACEMENT BY FORMAT:
+   - 9:16 Story: heading upper third, logo bottom-centre
+   - 1:1 Square: heading centre or lower half, logo bottom-right
+   - 3:4 Portrait: heading upper third, logo bottom-right
+   - 4:3 Landscape: heading left zone vertically centred, logo bottom-right
+   - 16:9 Widescreen: heading left zone vertically centred, logo bottom-right
+   - 21:9 Ultrawide: heading left third vertically centred, logo right side
+5. PREMIUM OUTPUT — generous padding, clean composition, no crowding.
 
-COMPOSITION RULES
-
-1. HEADINGS ARE SACRED
-Any text/headline in the source must appear fully legible in the output. Never crop it. If it won't fit in the same position, move it to the strongest compositional zone for the new format:
-  - 9:16 Story:     heading upper third, logo bottom-centre
-  - 1:1 Square:     heading lower-centre or centre, logo bottom-right  
-  - 3:4 Portrait:   heading upper third, logo bottom-right
-  - 4:5 Instagram:  heading upper third, visual below, logo bottom-right
-  - 16:9 Landscape: heading left zone vertically centred, logo bottom-right
-  - 3:1 Banner:     heading left half vertically centred, logo right side
-
-2. EXTEND BEFORE YOU CROP
-When the target format needs more canvas than the source provides, extend the background first. Sample and continue the existing background colour, gradient or texture seamlessly. Never stretch or warp existing content.
-
-3. CHARACTER AND SUBJECT QUALITY
-All people, products, logos and branded elements must remain at full quality. No distortion, no blurring, no stretching. If a person or product is present, they stay whole and intact.
-
-4. BRAND SIGNALS
-Logos must be fully visible with clear space. If the original logo position gets cropped in the new format, move it to the nearest clean corner.
-
-5. PREMIUM BALANCE
-Generous padding around all text (minimum 5% of frame width). Clean composition. No crowding. Every output should feel intentional and high quality.
-
-OUTPUT
-Generate the recomposed image at exactly the specified dimensions. High quality. Ready to use.`
+Output the recomposed image at exactly the target dimensions. High quality. Ready to use.`
 
 export async function recomposeImage(
   imageBase64: string,
@@ -40,67 +27,62 @@ export async function recomposeImage(
   apiKey: string,
   filename: string
 ): Promise<GenerationResult[]> {
+  const ai = new GoogleGenAI({ apiKey })
   const results: GenerationResult[] = []
 
   for (const format of targetFormats) {
     const spec = FORMAT_SPECS[format]
 
-    const prompt = `Recompose this image for the ${spec.label} format (${spec.ratio}, ${spec.w}×${spec.h}px).
+    const prompt = `${SYSTEM_PROMPT}
 
-Target: ${spec.w}×${spec.h}px exactly
+Recompose this image for ${spec.label} format (${spec.ratio}, ${spec.w}×${spec.h}px).
 Use case: ${spec.platform}
 
-Apply intelligent art direction:
-- Analyse what's in this image (headings, logos, subjects, background)
-- Determine the best recomposition strategy: extend canvas, smart crop, or reposition elements
-- Apply correct heading placement for ${spec.ratio} format (see your rules)
-- Ensure all text remains fully legible
-- Maintain subject and character quality
-- Output should feel premium, intentional, and ready for production
+Apply the correct heading placement for ${spec.ratio}. Extend the background if needed. Output at exactly ${spec.w}×${spec.h}px.`
 
-Generate the recomposed image now at exactly ${spec.w}×${spec.h}px.`
-
-    try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`,
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.1-flash-image-preview',
+      contents: [
         {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            prompt,
-            number_of_images: 1,
-            aspect_ratio: spec.ratio,
-          }),
-        }
-      )
+          role: 'user',
+          parts: [
+            {
+              inlineData: {
+                mimeType: mimeType,
+                data: imageBase64,
+              },
+            },
+            { text: prompt },
+          ],
+        },
+      ],
+      config: {
+        responseModalities: [Modality.TEXT, Modality.IMAGE],
+      },
+    })
 
-      if (!response.ok) {
-        const err = await response.json()
-        throw new Error(err?.error?.message || `API error ${response.status}`)
+    let imageData: string | null = null
+    const parts = response.candidates?.[0]?.content?.parts || []
+    for (const part of parts) {
+      if (part.inlineData?.mimeType?.startsWith('image/')) {
+        imageData = part.inlineData.data ?? null
+        break
       }
-
-      const data = await response.json()
-
-      const imageData: string | null = data?.predictions?.[0]?.bytesBase64Encoded ?? null
-
-      if (!imageData) throw new Error('No image returned for format ' + format)
-
-      const date      = new Date().toISOString().slice(0, 10).replace(/-/g, '')
-      const baseName  = filename.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9-_]/g, '-').toLowerCase()
-      const outputFilename = `${baseName}_${spec.slug}_${date}.png`
-
-      results.push({
-        ratio:    format,
-        slug:     spec.slug,
-        px:       `${spec.w}×${spec.h}`,
-        filename: outputFilename,
-        dataUrl:  `data:image/png;base64,${imageData}`,
-        method:   'recompose',
-      })
-    } catch (err) {
-      console.error(`[reframe] Failed format ${format}:`, err)
-      throw err
     }
+
+    if (!imageData) throw new Error(`No image returned for format ${format}`)
+
+    const date = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+    const baseName = filename.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9-_]/g, '-').toLowerCase()
+
+    results.push({
+      ratio: format,
+      slug: spec.slug,
+      px: `${spec.w}×${spec.h}`,
+      filename: `${baseName}_${spec.slug}_${date}.png`,
+      dataUrl: `data:image/png;base64,${imageData}`,
+      method: 'recompose',
+    })
   }
 
   return results
