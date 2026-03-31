@@ -7,17 +7,17 @@ import { FORMAT_SPECS, type Format, type GenerationResult } from '@/types'
 const ALL_FORMATS = Object.keys(FORMAT_SPECS) as Format[]
 
 // Vercel hard-caps request bodies at 4.5MB regardless of Next.js config.
-// Compress large images client-side before upload — transparent to the user.
+// Always run through canvas: converts to JPEG, resizes if over 1920px.
+// This guarantees the upload is small enough regardless of source format or size.
 async function compressForUpload(file: File): Promise<File> {
-  const MAX_BYTES = 3.5 * 1024 * 1024  // 3.5MB — safe buffer under the 4.5MB cap
-  const MAX_DIM   = 2048                // sufficient for Gemini to read composition
-
-  if (file.size <= MAX_BYTES) return file
+  const MAX_DIM = 1920
+  const QUALITY = 0.85
 
   return new Promise((resolve) => {
     const img = new Image()
     const url = URL.createObjectURL(file)
-    img.onload = () => {
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file) }
+    img.onload  = () => {
       URL.revokeObjectURL(url)
       let { width, height } = img
       if (width > MAX_DIM || height > MAX_DIM) {
@@ -28,7 +28,9 @@ async function compressForUpload(file: File): Promise<File> {
       const canvas = document.createElement('canvas')
       canvas.width  = width
       canvas.height = height
-      canvas.getContext('2d')!.drawImage(img, 0, 0, width, height)
+      const ctx = canvas.getContext('2d')
+      if (!ctx) { resolve(file); return }
+      ctx.drawImage(img, 0, 0, width, height)
       canvas.toBlob(
         blob => resolve(
           blob
@@ -36,7 +38,7 @@ async function compressForUpload(file: File): Promise<File> {
             : file
         ),
         'image/jpeg',
-        0.85
+        QUALITY
       )
     }
     img.src = url
@@ -98,6 +100,10 @@ export default function GeneratePage() {
     if (f.size > 15 * 1024 * 1024)   { setError('Image must be under 15MB'); return }
     setError('')
     const ready = await compressForUpload(f)
+    if (ready.size > 4 * 1024 * 1024) {
+      setError('Could not compress image enough — please use a file under 4MB.')
+      return
+    }
     setFile(ready)
     setPreviewUrl(URL.createObjectURL(ready))
     setStage('configure')
