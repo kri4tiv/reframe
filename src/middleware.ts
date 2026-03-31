@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
 const PROTECTED = ['/dashboard']
-const AUTH_PAGES = ['/login', '/signup']
 
 export async function middleware(req: NextRequest) {
   let res = NextResponse.next({
@@ -34,13 +33,9 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL('/login', req.url))
   }
 
-  if (AUTH_PAGES.includes(path) && user) {
-    return NextResponse.redirect(new URL('/dashboard', req.url))
-  }
-
   return res
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/login', '/signup', '/auth/callback'],
+  matcher: ['/dashboard/:path*', '/auth/callback'],
 }

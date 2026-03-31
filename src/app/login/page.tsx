@@ -1,11 +1,9 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 export default function LoginPage() {
-  const router = useRouter()
   const [mode, setMode] = useState<'login' | 'signup'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -56,8 +54,7 @@ export default function LoginPage() {
         }
         // If session exists, email confirmation is disabled — go straight to dashboard
         if (data.session) {
-          router.push('/dashboard')
-          router.refresh()
+          window.location.href = '/dashboard'
           return
         }
         // Fallback if email confirmation is still on
@@ -68,8 +65,7 @@ export default function LoginPage() {
           password
         })
         if (error) { setError('Invalid email or password'); return }
-        router.refresh()
-        router.push('/dashboard')
+        window.location.href = '/dashboard'
       }
     } catch (e) {
       setError('Something went wrong. Please try again.')
