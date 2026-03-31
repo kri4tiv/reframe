@@ -25,11 +25,14 @@ export default function GeneratePage() {
   const [results,      setResults]     = useState<GenerationResult[]>([])
   const [error,        setError]       = useState('')
   const [isBusy,       setIsBusy]      = useState(false)
+  const [retryAttempt, setRetryAttempt] = useState(0)
+  const [retryIn,      setRetryIn]     = useState<number | null>(null)
   const [genStep,      setGenStep]     = useState(0)
   const [previewModal, setPreviewModal] = useState<GenerationResult | null>(null)
   const [dark,         setDark]        = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const isDragging   = useRef(false)
+  const fileInputRef   = useRef<HTMLInputElement>(null)
+  const isDragging     = useRef(false)
+  const retryTimer     = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const GEN_STEPS = [
     'Uploading image...',
@@ -38,6 +41,11 @@ export default function GeneratePage() {
     ...Array.from(selected).map((f) => `Recomposing ${f}...`),
     'Packaging outputs...',
   ]
+
+  // Clean up retry countdown on unmount
+  useEffect(() => {
+    return () => { if (retryTimer.current) clearInterval(retryTimer.current) }
+  }, [])
 
   useEffect(() => {
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
@@ -66,9 +74,28 @@ export default function GeneratePage() {
     })
   }
 
+  const startRetryCountdown = (onFire: () => void) => {
+    if (retryTimer.current) clearInterval(retryTimer.current)
+    let secs = 12
+    setRetryIn(secs)
+    retryTimer.current = setInterval(() => {
+      secs--
+      setRetryIn(secs)
+      if (secs <= 0) {
+        clearInterval(retryTimer.current!)
+        retryTimer.current = null
+        setRetryIn(null)
+        onFire()
+      }
+    }, 1000)
+  }
+
   const handleGenerate = async () => {
     if (!file) return
     setError('')
+    setIsBusy(false)
+    if (retryTimer.current) { clearInterval(retryTimer.current); retryTimer.current = null }
+    setRetryIn(null)
     setStage('generating')
     setGenStep(0)
 
@@ -96,19 +123,43 @@ export default function GeneratePage() {
       if (!data.success) {
         const msg = data.error || 'Generation failed'
         const busy = msg.includes('503') || msg.includes('high demand') || msg.includes('UNAVAILABLE') || msg.includes('Max retries')
-        setIsBusy(busy)
-        setError(busy ? 'Gemini is under high demand right now. This is temporary — hit Generate again.' : msg)
         setStage('configure')
+        if (busy) {
+          const attempt = retryAttempt + 1
+          setRetryAttempt(attempt)
+          if (attempt <= 2) {
+            setIsBusy(true)
+            setError('')
+            startRetryCountdown(() => handleGenerate())
+          } else {
+            setIsBusy(true)
+            setError('Gemini is still too busy after 3 attempts. Wait a minute then hit Generate.')
+          }
+        } else {
+          setIsBusy(false)
+          setError(msg)
+        }
         return
       }
-      setIsBusy(false)
 
+      setIsBusy(false)
+      setRetryAttempt(0)
       setResults(data.data!.results)
       setStage('results')
     } catch (e) {
       clearInterval(stepInterval)
-      setError('Network error — check your connection and try again.')
+      // fetch() itself threw — most likely the function timed out (Vercel closed the connection)
       setStage('configure')
+      const attempt = retryAttempt + 1
+      setRetryAttempt(attempt)
+      if (attempt <= 2) {
+        setIsBusy(true)
+        setError('')
+        startRetryCountdown(() => handleGenerate())
+      } else {
+        setIsBusy(false)
+        setError('Generation timed out repeatedly. Try selecting fewer formats, or try again later.')
+      }
     }
   }
 
@@ -134,12 +185,15 @@ export default function GeneratePage() {
   }
 
   const reset = () => {
+    if (retryTimer.current) { clearInterval(retryTimer.current); retryTimer.current = null }
     setStage('upload')
     setFile(null)
     setPreviewUrl(null)
     setResults([])
     setError('')
     setIsBusy(false)
+    setRetryAttempt(0)
+    setRetryIn(null)
     setGenStep(0)
   }
 
@@ -248,23 +302,33 @@ export default function GeneratePage() {
                   })}
                 </div>
 
-                {error && !isBusy && <p className="error-text" style={{ marginBottom: '12px' }}>{error}</p>}
+                {error && <p className="error-text" style={{ marginBottom: '12px' }}>{error}</p>}
 
-                {isBusy && (
-                  <div style={{ padding: '14px 16px', background: 'rgba(255,170,0,0.08)', border: '1px solid rgba(255,170,0,0.3)', borderRadius: '8px', marginBottom: '12px' }}>
+                {retryIn !== null && (
+                  <div style={{ padding: '14px 16px', background: 'rgba(255,170,0,0.08)', border: '1px solid rgba(255,170,0,0.3)', borderRadius: '8px', marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
                     <p style={{ fontSize: '13px', color: '#B8860B', margin: 0, lineHeight: 1.5 }}>
-                      Gemini is under high demand right now — this is temporary and unrelated to your API key. Just hit Generate again.
+                      Gemini is busy — auto-retrying in <strong>{retryIn}s</strong> (attempt {retryAttempt}/2)
                     </p>
+                    <button
+                      onClick={() => { if (retryTimer.current) { clearInterval(retryTimer.current); retryTimer.current = null } setRetryIn(null); handleGenerate() }}
+                      style={{ background: 'none', border: '1px solid rgba(255,170,0,0.4)', borderRadius: '4px', padding: '4px 10px', fontSize: '11px', fontWeight: 700, color: '#B8860B', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'var(--font)' }}
+                    >
+                      Retry now
+                    </button>
                   </div>
                 )}
 
                 <button
                   className="btn btn-accent"
                   onClick={handleGenerate}
-                  disabled={selected.size === 0}
+                  disabled={selected.size === 0 || retryIn !== null}
                   style={{ width: '100%', height: '52px', fontSize: '14px' }}
                 >
-                  {isBusy ? 'Try again' : `Generate ${selected.size} format${selected.size > 1 ? 's' : ''}`}
+                  {retryIn !== null
+                    ? `Retrying in ${retryIn}s...`
+                    : isBusy
+                      ? 'Try again'
+                      : `Generate ${selected.size} format${selected.size > 1 ? 's' : ''}`}
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </button>
               </div>
