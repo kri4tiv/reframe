@@ -6,7 +6,6 @@ import { createClient } from '@/lib/supabase/client'
 
 export default function LoginPage() {
   const router = useRouter()
-  const supabase = createClient()
   const [mode, setMode] = useState<'login' | 'signup'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -18,10 +17,21 @@ export default function LoginPage() {
   const handleGoogle = async () => {
     setGoogleLoading(true)
     setError('')
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback` }
-    })
+    try {
+      const supabase = createClient()
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${siteUrl}/auth/callback`,
+          queryParams: { access_type: 'offline', prompt: 'consent' }
+        }
+      })
+      if (error) { setError(error.message); setGoogleLoading(false) }
+    } catch (e) {
+      setError('Google sign in failed. Please try again.')
+      setGoogleLoading(false)
+    }
   }
 
   const handleEmail = async (e: React.FormEvent) => {
@@ -30,24 +40,49 @@ export default function LoginPage() {
     if (password.length < 8) { setError('Password must be at least 8 characters'); return }
     setLoading(true)
     try {
+      const supabase = createClient()
       if (mode === 'signup') {
-        const { error } = await supabase.auth.signUp({ email, password })
+        const { data, error } = await supabase.auth.signUp({
+          email: email.toLowerCase().trim(),
+          password,
+          options: {
+            emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || window.location.origin}/auth/callback`
+          }
+        })
         if (error) { setError(error.message); return }
-        setDone(true)
+        if (data.user && data.session) {
+          router.push('/dashboard')
+        } else {
+          setDone(true)
+        }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password })
+        const { error } = await supabase.auth.signInWithPassword({
+          email: email.toLowerCase().trim(),
+          password
+        })
         if (error) { setError('Invalid email or password'); return }
         router.push('/dashboard')
       }
+    } catch (e) {
+      setError('Something went wrong. Please try again.')
     } finally {
       setLoading(false)
     }
+  }
+
+  const switchMode = () => {
+    setMode(m => m === 'login' ? 'signup' : 'login')
+    setError('')
+    setEmail('')
+    setPassword('')
+    setDone(false)
   }
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--paper)', color: 'var(--ink)', fontFamily: 'var(--font)', display: 'flex', flexDirection: 'column' }}>
       <nav style={{ padding: '0 40px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', background: 'var(--paper)' }}>
         <Link href="/" style={{ textDecoration: 'none', fontWeight: 900, fontSize: '15px', letterSpacing: '-0.02em', color: 'var(--ink)' }}>REFRAME</Link>
+        <Link href="/generate" style={{ textDecoration: 'none', fontSize: '13px', color: 'var(--muted)' }}>Try without account</Link>
       </nav>
 
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px' }}>
@@ -59,8 +94,10 @@ export default function LoginPage() {
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 10l4 4 8-8" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </div>
               <h2 style={{ fontWeight: 900, fontSize: '20px', marginBottom: '10px' }}>Check your email</h2>
-              <p style={{ fontSize: '14px', color: 'var(--muted)', lineHeight: 1.6, marginBottom: '24px' }}>We sent a link to <strong>{email}</strong>. Click it to activate your account.</p>
-              <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => setDone(false)}>Back to sign in</button>
+              <p style={{ fontSize: '14px', color: 'var(--muted)', lineHeight: 1.6, marginBottom: '24px' }}>
+                We sent a confirmation link to <strong>{email}</strong>
+              </p>
+              <button className="btn btn-primary" style={{ width: '100%' }} onClick={switchMode}>Back to sign in</button>
             </div>
           ) : (
             <>
@@ -69,17 +106,25 @@ export default function LoginPage() {
                   {mode === 'login' ? 'Welcome back' : 'Create account'}
                 </h1>
                 <p style={{ fontSize: '13px', color: 'var(--muted)' }}>
-                  {mode === 'login' ? 'Sign in to your Reframe account' : '3 free generations on us'}
+                  {mode === 'login' ? 'Sign in to Reframe' : '3 free generations on us'}
                 </p>
               </div>
 
-              {/* Google button */}
               <button
                 onClick={handleGoogle}
                 disabled={googleLoading}
-                style={{ width: '100%', height: '46px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', cursor: 'pointer', fontFamily: 'var(--font)', fontWeight: 600, fontSize: '14px', color: 'var(--ink)', transition: 'border-color 0.15s', marginBottom: '20px' }}
-                onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--ink)')}
-                onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}
+                style={{
+                  width: '100%', height: '46px',
+                  background: 'var(--surface)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '6px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                  cursor: googleLoading ? 'not-allowed' : 'pointer',
+                  fontFamily: 'var(--font)', fontWeight: 600, fontSize: '14px', color: 'var(--ink)',
+                  transition: 'border-color 0.15s, opacity 0.15s',
+                  opacity: googleLoading ? 0.6 : 1,
+                  marginBottom: '20px'
+                }}
               >
                 {googleLoading ? (
                   <div className="dot-loader"><span /><span /><span /></div>
@@ -96,34 +141,35 @@ export default function LoginPage() {
                 )}
               </button>
 
-              {/* Divider */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
                 <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
                 <span style={{ fontSize: '12px', color: 'var(--muted)' }}>or</span>
                 <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
               </div>
 
-              {/* Email form */}
               <form onSubmit={handleEmail} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div>
                   <label style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', display: 'block', marginBottom: '6px' }}>Email</label>
-                  <input className="input" type="email" required placeholder="you@company.com" value={email} onChange={e => setEmail(e.target.value)} />
+                  <input className="input" type="email" required autoComplete="email" placeholder="you@company.com" value={email} onChange={e => setEmail(e.target.value)} />
                 </div>
                 <div>
                   <label style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', display: 'block', marginBottom: '6px' }}>Password</label>
-                  <input className="input" type="password" required placeholder="Min. 8 characters" value={password} onChange={e => setPassword(e.target.value)} />
+                  <input className="input" type="password" required autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} placeholder="Min. 8 characters" value={password} onChange={e => setPassword(e.target.value)} />
                 </div>
-                {error && <p className="error-text">{error}</p>}
+                {error && (
+                  <div style={{ padding: '10px 14px', background: 'rgba(229,62,62,0.08)', border: '1px solid rgba(229,62,62,0.2)', borderRadius: '6px' }}>
+                    <p style={{ fontSize: '13px', color: '#E53E3E', margin: 0 }}>{error}</p>
+                  </div>
+                )}
                 <button className="btn btn-primary" type="submit" disabled={loading} style={{ width: '100%', height: '46px' }}>
                   {loading ? <div className="dot-loader"><span /><span /><span /></div> : mode === 'login' ? 'Sign in' : 'Create account'}
                 </button>
               </form>
 
-              {/* Toggle */}
               <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '13px', color: 'var(--muted)' }}>
-                {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
-                <button onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError('') }} style={{ background: 'none', border: 'none', color: 'var(--ink)', fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font)', fontSize: '13px' }}>
-                  {mode === 'login' ? 'Sign up' : 'Sign in'}
+                {mode === 'login' ? 'No account? ' : 'Have an account? '}
+                <button onClick={switchMode} style={{ background: 'none', border: 'none', color: 'var(--ink)', fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font)', fontSize: '13px', padding: 0 }}>
+                  {mode === 'login' ? 'Sign up free' : 'Sign in'}
                 </button>
               </p>
             </>
