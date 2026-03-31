@@ -24,6 +24,7 @@ export default function GeneratePage() {
   const [selected,     setSelected]    = useState<Set<Format>>(new Set<Format>(['1:1', '9:16', '16:9']))
   const [results,      setResults]     = useState<GenerationResult[]>([])
   const [error,        setError]       = useState('')
+  const [isBusy,       setIsBusy]      = useState(false)
   const [genStep,      setGenStep]     = useState(0)
   const [previewModal, setPreviewModal] = useState<GenerationResult | null>(null)
   const [dark,         setDark]        = useState(false)
@@ -93,10 +94,14 @@ export default function GeneratePage() {
       }
 
       if (!data.success) {
-        setError(data.error || 'Generation failed')
+        const msg = data.error || 'Generation failed'
+        const busy = msg.includes('503') || msg.includes('high demand') || msg.includes('UNAVAILABLE') || msg.includes('Max retries')
+        setIsBusy(busy)
+        setError(busy ? 'Gemini is under high demand right now. This is temporary — hit Generate again.' : msg)
         setStage('configure')
         return
       }
+      setIsBusy(false)
 
       setResults(data.data!.results)
       setStage('results')
@@ -134,6 +139,7 @@ export default function GeneratePage() {
     setPreviewUrl(null)
     setResults([])
     setError('')
+    setIsBusy(false)
     setGenStep(0)
   }
 
@@ -242,7 +248,15 @@ export default function GeneratePage() {
                   })}
                 </div>
 
-                {error && <p className="error-text" style={{ marginBottom: '12px' }}>{error}</p>}
+                {error && !isBusy && <p className="error-text" style={{ marginBottom: '12px' }}>{error}</p>}
+
+                {isBusy && (
+                  <div style={{ padding: '14px 16px', background: 'rgba(255,170,0,0.08)', border: '1px solid rgba(255,170,0,0.3)', borderRadius: '8px', marginBottom: '12px' }}>
+                    <p style={{ fontSize: '13px', color: '#B8860B', margin: 0, lineHeight: 1.5 }}>
+                      Gemini is under high demand right now — this is temporary and unrelated to your API key. Just hit Generate again.
+                    </p>
+                  </div>
+                )}
 
                 <button
                   className="btn btn-accent"
@@ -250,7 +264,7 @@ export default function GeneratePage() {
                   disabled={selected.size === 0}
                   style={{ width: '100%', height: '52px', fontSize: '14px' }}
                 >
-                  Generate {selected.size} format{selected.size > 1 ? 's' : ''}
+                  {isBusy ? 'Try again' : `Generate ${selected.size} format${selected.size > 1 ? 's' : ''}`}
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </button>
               </div>

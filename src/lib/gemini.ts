@@ -27,7 +27,7 @@ Do not add people, objects, products, shadows, reflections, or any element that 
 6. OUTPUT QUALITY
 Output must be high resolution, sharp, and indistinguishable from a professionally recomposed image. No compression artefacts, no blurring, no visible seams at extension boundaries.`
 
-async function withRetry<T>(fn: () => Promise<T>, retries = 3, delayMs = 2000): Promise<T> {
+async function withRetry<T>(fn: () => Promise<T>, retries = 4, baseDelayMs = 5000): Promise<T> {
   for (let i = 0; i < retries; i++) {
     try {
       return await fn()
@@ -35,7 +35,10 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 3, delayMs = 2000): 
       const msg = err instanceof Error ? err.message : String(err)
       const isRetryable = msg.includes('503') || msg.includes('UNAVAILABLE') || msg.includes('high demand') || msg.includes('overloaded')
       if (isRetryable && i < retries - 1) {
-        await new Promise(r => setTimeout(r, delayMs * (i + 1)))
+        // Exponential backoff (5s, 10s, 15s) + random jitter up to 2s
+        // Jitter prevents all parallel format calls retrying simultaneously
+        const jitter = Math.random() * 2000
+        await new Promise(r => setTimeout(r, baseDelayMs * (i + 1) + jitter))
         continue
       }
       throw err
