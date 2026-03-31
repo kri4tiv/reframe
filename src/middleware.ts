@@ -2,20 +2,25 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
 const PROTECTED = ['/dashboard']
-const AUTH_ONLY = ['/login', '/signup'] // redirect to dashboard if already logged in
+const AUTH_PAGES = ['/login', '/signup']
 
 export async function middleware(req: NextRequest) {
-  const res  = NextResponse.next()
-  const path = req.nextUrl.pathname
+  let res = NextResponse.next({
+    request: { headers: req.headers },
+  })
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll:  () => req.cookies.getAll(),
-        setAll: (cookies: { name: string; value: string; options?: Record<string, unknown> }[]) => {
-          cookies.forEach(({ name, value, options }) => res.cookies.set(name, value, options))
+        getAll() { return req.cookies.getAll() },
+        setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
+          cookiesToSet.forEach(({ name, value }) => req.cookies.set(name, value))
+          res = NextResponse.next({ request: { headers: req.headers } })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            res.cookies.set(name, value, options)
+          )
         },
       },
     }
@@ -23,13 +28,13 @@ export async function middleware(req: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Redirect unauthenticated users away from protected routes
+  const path = req.nextUrl.pathname
+
   if (PROTECTED.some(p => path.startsWith(p)) && !user) {
     return NextResponse.redirect(new URL('/login', req.url))
   }
 
-  // Redirect logged-in users away from auth pages
-  if (AUTH_ONLY.includes(path) && user) {
+  if (AUTH_PAGES.includes(path) && user) {
     return NextResponse.redirect(new URL('/dashboard', req.url))
   }
 
@@ -37,5 +42,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/login', '/signup'],
+  matcher: ['/dashboard/:path*', '/login', '/signup', '/auth/callback'],
 }

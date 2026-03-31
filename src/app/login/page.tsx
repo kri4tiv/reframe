@@ -45,22 +45,30 @@ export default function LoginPage() {
         const { data, error } = await supabase.auth.signUp({
           email: email.toLowerCase().trim(),
           password,
-          options: {
-            emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || window.location.origin}/auth/callback`
-          }
         })
-        if (error) { setError(error.message); return }
-        if (data.user && data.session) {
-          router.push('/dashboard')
-        } else {
-          setDone(true)
+        if (error) {
+          if (error.message.includes('already registered')) {
+            setError('An account with this email already exists. Sign in instead.')
+          } else {
+            setError(error.message)
+          }
+          return
         }
+        // If session exists, email confirmation is disabled — go straight to dashboard
+        if (data.session) {
+          router.push('/dashboard')
+          router.refresh()
+          return
+        }
+        // Fallback if email confirmation is still on
+        setDone(true)
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email: email.toLowerCase().trim(),
           password
         })
         if (error) { setError('Invalid email or password'); return }
+        router.refresh()
         router.push('/dashboard')
       }
     } catch (e) {
