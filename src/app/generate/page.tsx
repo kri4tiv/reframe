@@ -148,11 +148,31 @@ export default function GeneratePage() {
     }, 900)
 
     try {
-      const form = new FormData()
-      form.append('image',   file)
-      form.append('formats', JSON.stringify(Array.from(selected)))
+      const b64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onerror = reject
+        reader.onload  = () => resolve((reader.result as string).split(',')[1])
+        reader.readAsDataURL(file)
+      })
 
-      const res = await fetch('/api/generate', { method: 'POST', body: form })
+      // Safety check: base64 string should be < ~3.5MB to stay under Vercel's 4.5MB JSON body limit
+      if (b64.length > 3.5 * 1024 * 1024) {
+        setError('Image is too large to upload — please use a smaller file.')
+        setStage('configure')
+        clearInterval(stepInterval)
+        return
+      }
+
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageBase64: b64,
+          mimeType:    file.type,
+          filename:    file.name,
+          formats:     Array.from(selected),
+        }),
+      })
       clearInterval(stepInterval)
 
       let data: { success: boolean; data?: { results: GenerationResult[] }; error?: string }

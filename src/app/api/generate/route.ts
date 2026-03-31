@@ -13,32 +13,29 @@ export async function POST(req: NextRequest) {
       return jsonErr('Too many requests. Please slow down.', 429)
     }
 
-    const form = await req.formData()
-    const imageFile = form.get('image') as File | null
-    const formatsRaw = form.get('formats') as string | null
+    const { imageBase64, mimeType, filename, formats } = await req.json() as {
+      imageBase64: string
+      mimeType:    string
+      filename:    string
+      formats:     Format[]
+    }
 
-    if (!imageFile) return jsonErr('No image provided')
-    if (!formatsRaw) return jsonErr('No formats selected')
-
-    const formats = JSON.parse(formatsRaw) as Format[]
-    if (!formats.length || formats.length > 6) return jsonErr('Invalid formats')
+    if (!imageBase64) return jsonErr('No image provided')
+    if (!mimeType || !filename) return jsonErr('Missing image metadata')
+    if (!formats?.length || formats.length > 6) return jsonErr('Invalid formats')
 
     const allowed = ['image/jpeg', 'image/png', 'image/webp']
-    if (!allowed.includes(imageFile.type)) return jsonErr('Unsupported image type. Use JPG, PNG or WebP')
-    if (imageFile.size > 15 * 1024 * 1024) return jsonErr('Image must be under 15MB')
+    if (!allowed.includes(mimeType)) return jsonErr('Unsupported image type. Use JPG, PNG or WebP')
 
     const apiKey = process.env.GEMINI_DRAFT_API_KEY
     if (!apiKey) return jsonErr('Service unavailable', 503)
 
-    const imageBuffer = Buffer.from(await imageFile.arrayBuffer())
-    const imageBase64 = imageBuffer.toString('base64')
-
     const results = await recomposeImage(
       imageBase64,
-      imageFile.type,
+      mimeType,
       formats,
       apiKey,
-      imageFile.name
+      filename
     )
 
     return jsonOk({ results })
