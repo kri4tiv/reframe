@@ -6,6 +6,43 @@ import { FORMAT_SPECS, type Format, type GenerationResult } from '@/types'
 
 const ALL_FORMATS = Object.keys(FORMAT_SPECS) as Format[]
 
+// Vercel hard-caps request bodies at 4.5MB regardless of Next.js config.
+// Compress large images client-side before upload — transparent to the user.
+async function compressForUpload(file: File): Promise<File> {
+  const MAX_BYTES = 3.5 * 1024 * 1024  // 3.5MB — safe buffer under the 4.5MB cap
+  const MAX_DIM   = 2048                // sufficient for Gemini to read composition
+
+  if (file.size <= MAX_BYTES) return file
+
+  return new Promise((resolve) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      let { width, height } = img
+      if (width > MAX_DIM || height > MAX_DIM) {
+        const scale = Math.min(MAX_DIM / width, MAX_DIM / height)
+        width  = Math.round(width  * scale)
+        height = Math.round(height * scale)
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width  = width
+      canvas.height = height
+      canvas.getContext('2d')!.drawImage(img, 0, 0, width, height)
+      canvas.toBlob(
+        blob => resolve(
+          blob
+            ? new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' })
+            : file
+        ),
+        'image/jpeg',
+        0.85
+      )
+    }
+    img.src = url
+  })
+}
+
 type Stage = 'upload' | 'configure' | 'generating' | 'results'
 
 const ASPECT_DISPLAY: Record<Format, { boxW: number; boxH: number }> = {
@@ -56,12 +93,13 @@ export default function GeneratePage() {
     document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light')
   }, [dark])
 
-  const handleFile = useCallback((f: File) => {
+  const handleFile = useCallback(async (f: File) => {
     if (!f.type.startsWith('image/')) { setError('Please upload an image file'); return }
     if (f.size > 15 * 1024 * 1024)   { setError('Image must be under 15MB'); return }
     setError('')
-    setFile(f)
-    setPreviewUrl(URL.createObjectURL(f))
+    const ready = await compressForUpload(f)
+    setFile(ready)
+    setPreviewUrl(URL.createObjectURL(ready))
     setStage('configure')
   }, [])
 
@@ -115,7 +153,10 @@ export default function GeneratePage() {
       try {
         data = await res.json()
       } catch {
-        setError(`Server error (${res.status}). The generation may have timed out — try fewer formats.`)
+        const msg = res.status === 413
+          ? 'Image is too large to upload. Try a smaller file.'
+          : `Server error (${res.status}). The generation may have timed out — try fewer formats.`
+        setError(msg)
         setStage('configure')
         return
       }
