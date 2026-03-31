@@ -7,7 +7,7 @@ const FORMATS = [
   { label: '9:16', name: 'Story',     w: 9, h: 16 },
   { label: '16:9', name: 'Landscape', w: 16, h: 9 },
   { label: '3:4',  name: 'Portrait',  w: 3, h: 4 },
-  { label: '3:1',  name: 'Banner',    w: 3, h: 1 },
+  { label: '21:9', name: 'Banner',    w: 21, h: 9 },
 ]
 
 const STEPS = [
@@ -54,22 +54,14 @@ export default function LandingPage() {
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M12 7.5A5.5 5.5 0 0 1 6.5 2a5.5 5.5 0 1 0 5.5 5.5z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/></svg>
             )}
           </button>
-          <Link href="/login" style={{ textDecoration: 'none' }}>
-            <button className="btn btn-ghost btn-sm">Sign in</button>
-          </Link>
           <Link href="/generate" style={{ textDecoration: 'none' }}>
-            <button className="btn btn-primary btn-sm">Try free</button>
+            <button className="btn btn-primary btn-sm">Start reframing</button>
           </Link>
         </div>
       </nav>
 
       {/* ── Hero ── */}
       <section style={{ maxWidth: '1100px', margin: '0 auto', padding: '100px 40px 80px' }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', marginBottom: '28px' }}>
-          <span className="free-badge">3 FREE GENERATIONS</span>
-          <span style={{ fontSize: '12px', color: 'var(--muted)' }}>No signup required</span>
-        </div>
-
         <h1 className="display" style={{ fontSize: 'clamp(44px, 7vw, 84px)', marginBottom: '24px', maxWidth: '800px' }}>
           One image.<br />
           <span style={{ color: 'var(--accent)' }}>Every format.</span>
@@ -86,7 +78,6 @@ export default function LandingPage() {
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </button>
           </Link>
-          <span style={{ fontSize: '13px', color: 'var(--muted)' }}>3 free · No card required</span>
         </div>
 
         {/* Format strip */}
@@ -119,46 +110,6 @@ export default function LandingPage() {
                 <p style={{ fontSize: '14px', color: 'rgba(247,246,242,0.5)', lineHeight: 1.7 }}>{s.body}</p>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Pricing ── */}
-      <section style={{ maxWidth: '900px', margin: '0 auto', padding: '80px 40px' }}>
-        <p className="label" style={{ marginBottom: '48px' }}>PRICING</p>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-
-          {/* Free */}
-          <div className="card" style={{ padding: '32px' }}>
-            <p style={{ fontWeight: 900, fontSize: '18px', letterSpacing: '-0.01em', marginBottom: '8px' }}>Free</p>
-            <p style={{ fontSize: '32px', fontWeight: 900, letterSpacing: '-0.02em', marginBottom: '4px' }}>3 <span style={{ fontSize: '14px', fontWeight: 400, color: 'var(--muted)' }}>generations</span></p>
-            <p style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '28px' }}>No signup. No card.</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '28px' }}>
-              {['All 6 formats', 'High quality output', 'Download PNG', 'No watermark'].map(f => (
-                <div key={f} style={{ display: 'flex', gap: '10px', alignItems: 'center', fontSize: '13px' }}>
-                  <div style={{ width: '5px', height: '5px', background: 'var(--accent)', borderRadius: '50%', flexShrink: 0 }} />
-                  {f}
-                </div>
-              ))}
-            </div>
-            <Link href="/generate"><button className="btn btn-ghost" style={{ width: '100%' }}>Try now</button></Link>
-          </div>
-
-          {/* Pro */}
-          <div className="card" style={{ padding: '32px', border: '1.5px solid var(--ink)', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: '16px', right: '16px', background: 'var(--ink)', color: 'var(--paper)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', padding: '3px 10px', borderRadius: '100px' }}>BYOK</div>
-            <p style={{ fontWeight: 900, fontSize: '18px', letterSpacing: '-0.01em', marginBottom: '8px' }}>Pro</p>
-            <p style={{ fontSize: '32px', fontWeight: 900, letterSpacing: '-0.02em', marginBottom: '4px' }}>~$0.07 <span style={{ fontSize: '14px', fontWeight: 400, color: 'var(--muted)' }}>per run</span></p>
-            <p style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '28px' }}>Bring your own Gemini API key</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '28px' }}>
-              {['Unlimited generations', 'All 6 formats per run', 'Generation history', 'ZIP download pack', 'Correct file naming'].map(f => (
-                <div key={f} style={{ display: 'flex', gap: '10px', alignItems: 'center', fontSize: '13px' }}>
-                  <div style={{ width: '5px', height: '5px', background: 'var(--accent)', borderRadius: '50%', flexShrink: 0 }} />
-                  {f}
-                </div>
-              ))}
-            </div>
-            <Link href="/signup"><button className="btn btn-primary" style={{ width: '100%' }}>Create account</button></Link>
           </div>
         </div>
       </section>

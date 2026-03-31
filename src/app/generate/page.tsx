@@ -4,7 +4,6 @@ import Link from 'next/link'
 import JSZip from 'jszip'
 import { FORMAT_SPECS, type Format, type GenerationResult } from '@/types'
 
-const FREE_LIMIT = 3
 const ALL_FORMATS = Object.keys(FORMAT_SPECS) as Format[]
 
 type Stage = 'upload' | 'configure' | 'generating' | 'results'
@@ -19,22 +18,18 @@ const ASPECT_DISPLAY: Record<Format, { boxW: number; boxH: number }> = {
 }
 
 export default function GeneratePage() {
-  const [stage,          setStage]         = useState<Stage>('upload')
-  const [file,           setFile]          = useState<File | null>(null)
-  const [previewUrl,     setPreviewUrl]    = useState<string | null>(null)
-  const [selected,       setSelected]      = useState<Set<Format>>(new Set<Format>(['1:1', '9:16', '16:9']))
-  const [apiKey,         setApiKey]        = useState('')
-  const [showApiKey,     setShowApiKey]    = useState(false)
-  const [results,        setResults]       = useState<GenerationResult[]>([])
-  const [error,          setError]         = useState('')
-  const [gensRemaining,  setGensRemaining] = useState<number | null>(null)
-  const [genStep,        setGenStep]       = useState(0)
-  const [previewModal,   setPreviewModal]  = useState<GenerationResult | null>(null)
-  const [dark,           setDark]          = useState(false)
+  const [stage,        setStage]       = useState<Stage>('upload')
+  const [file,         setFile]        = useState<File | null>(null)
+  const [previewUrl,   setPreviewUrl]  = useState<string | null>(null)
+  const [selected,     setSelected]    = useState<Set<Format>>(new Set<Format>(['1:1', '9:16', '16:9']))
+  const [results,      setResults]     = useState<GenerationResult[]>([])
+  const [error,        setError]       = useState('')
+  const [genStep,      setGenStep]     = useState(0)
+  const [previewModal, setPreviewModal] = useState<GenerationResult | null>(null)
+  const [dark,         setDark]        = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const isDragging   = useRef(false)
 
-  // CHANGE 6 — dynamic GEN_STEPS based on selected formats
   const GEN_STEPS = [
     'Uploading image...',
     'Analysing composition...',
@@ -43,7 +38,6 @@ export default function GeneratePage() {
     'Packaging outputs...',
   ]
 
-  // CHANGE 5 — dark mode effects
   useEffect(() => {
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
     setDark(prefersDark)
@@ -85,7 +79,6 @@ export default function GeneratePage() {
       const form = new FormData()
       form.append('image',   file)
       form.append('formats', JSON.stringify(Array.from(selected)))
-      if (apiKey.trim()) form.append('apiKey', apiKey.trim())
 
       const res  = await fetch('/api/generate', { method: 'POST', body: form })
       const data = await res.json()
@@ -98,7 +91,6 @@ export default function GeneratePage() {
       }
 
       setResults(data.data.results)
-      setGensRemaining(data.data.freeGensRemaining)
       setStage('results')
     } catch (e) {
       clearInterval(stepInterval)
@@ -144,13 +136,9 @@ export default function GeneratePage() {
       <nav style={{ position: 'sticky', top: 0, zIndex: 50, background: 'var(--paper)', backdropFilter: 'blur(12px)', borderBottom: '1px solid var(--border)', padding: '0 40px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Link href="/" style={{ textDecoration: 'none', fontWeight: 900, fontSize: '15px', letterSpacing: '-0.02em', color: 'var(--ink)' }}>REFRAME</Link>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          {gensRemaining !== null && (
-            <span className="free-badge">{gensRemaining} FREE {gensRemaining === 1 ? 'GEN' : 'GENS'} LEFT</span>
-          )}
           {stage !== 'upload' && (
             <button className="btn btn-ghost btn-sm" onClick={reset}>New image</button>
           )}
-          {/* CHANGE 5 — dark mode toggle */}
           <button
             onClick={() => setDark(d => !d)}
             className="btn btn-ghost btn-sm"
@@ -163,9 +151,6 @@ export default function GeneratePage() {
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M12 7.5A5.5 5.5 0 0 1 6.5 2a5.5 5.5 0 1 0 5.5 5.5z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/></svg>
             )}
           </button>
-          <Link href="/signup" style={{ textDecoration: 'none' }}>
-            <button className="btn btn-primary btn-sm">Sign up</button>
-          </Link>
         </div>
       </nav>
 
@@ -197,11 +182,6 @@ export default function GeneratePage() {
             </div>
 
             {error && <p className="error-text" style={{ marginTop: '16px' }}>{error}</p>}
-
-            <div style={{ marginTop: '48px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span className="free-badge">3 FREE GENERATIONS</span>
-              <span style={{ fontSize: '12px', color: 'var(--muted)' }}>No account required to start</span>
-            </div>
           </div>
         )}
 
@@ -254,29 +234,6 @@ export default function GeneratePage() {
                   })}
                 </div>
 
-                {/* API Key section */}
-                <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px', marginBottom: '20px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: showApiKey ? '12px' : '0' }}>
-                    <div>
-                      <p style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: '2px' }}>Gemini API Key</p>
-                      <p style={{ fontSize: '11px', color: 'var(--muted)' }}>Optional - we'll use our demo key for your first 3 gens</p>
-                    </div>
-                    <button className="btn btn-ghost btn-sm" onClick={() => setShowApiKey(s => !s)}>
-                      {showApiKey ? 'Hide' : 'Add key'}
-                    </button>
-                  </div>
-                  {showApiKey && (
-                    <input
-                      className="input"
-                      type="password"
-                      placeholder="AIza..."
-                      value={apiKey}
-                      onChange={e => setApiKey(e.target.value)}
-                      style={{ fontSize: '13px', fontFamily: 'var(--font-mono, monospace)' }}
-                    />
-                  )}
-                </div>
-
                 {error && <p className="error-text" style={{ marginBottom: '12px' }}>{error}</p>}
 
                 <button
@@ -288,16 +245,12 @@ export default function GeneratePage() {
                   Generate {selected.size} format{selected.size > 1 ? 's' : ''}
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </button>
-
-                <p style={{ fontSize: '11px', color: 'var(--muted)', textAlign: 'center', marginTop: '10px' }}>
-                  Uses your 3 free generations · <Link href="/signup" style={{ color: 'var(--ink)' }}>Sign up</Link> for unlimited with your API key
-                </p>
               </div>
             </div>
           </div>
         )}
 
-        {/* ── GENERATING — CHANGE 3 ── */}
+        {/* ── GENERATING ── */}
         {stage === 'generating' && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '80px 0', animation: 'fadeIn 0.3s ease forwards' }}>
 
@@ -324,9 +277,8 @@ export default function GeneratePage() {
               {GEN_STEPS[genStep]}
             </p>
 
-            {/* Time estimate */}
             <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '32px' }}>
-              Est. {Math.round(selected.size * 18)}–{Math.round(selected.size * 28)}s remaining
+              Est. {Math.round(selected.size * 18)}-{Math.round(selected.size * 28)}s remaining
             </p>
 
             {/* Progress bar */}
@@ -393,7 +345,7 @@ export default function GeneratePage() {
               </div>
             </div>
 
-            {/* CHANGE 4 — Preview Modal */}
+            {/* Preview Modal */}
             {previewModal && (
               <div
                 onClick={() => setPreviewModal(null)}
@@ -420,17 +372,15 @@ export default function GeneratePage() {
               </div>
             )}
 
-            {/* CHANGE 4 — Results Grid */}
+            {/* Results Grid */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
               {results.map(r => (
                 <div key={r.slug} className="card" style={{ overflow: 'hidden', transition: 'transform 0.15s, border-color 0.15s' }}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--ink)' }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)' }}
                 >
-                  {/* Image */}
                   <div style={{ background: 'var(--dim)', aspectRatio: String(FORMAT_SPECS[r.ratio].w / FORMAT_SPECS[r.ratio].h), overflow: 'hidden', position: 'relative' }}>
                     <img src={r.dataUrl} alt={r.ratio} style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
-                    {/* Hover overlay */}
                     <div className="result-hover-overlay" style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0)', display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }}
                       onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0.5)'}
                       onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'rgba(0,0,0,0)'}
@@ -443,7 +393,6 @@ export default function GeneratePage() {
                         onClick={e => { e.stopPropagation(); downloadSingle(r) }}>Download</button>
                     </div>
                   </div>
-                  {/* Info */}
                   <div style={{ padding: '12px 14px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                       <span style={{ fontWeight: 700, fontSize: '13px' }}>{r.ratio}</span>
@@ -451,7 +400,6 @@ export default function GeneratePage() {
                     </div>
                     <p style={{ fontSize: '11px', color: 'var(--muted)', wordBreak: 'break-all' }}>{r.filename}</p>
                   </div>
-                  {/* Actions */}
                   <div style={{ padding: '8px 14px', borderTop: '1px solid var(--border)', display: 'flex', gap: '8px' }}>
                     <button className="btn btn-ghost btn-sm" style={{ flex: 1, fontSize: '11px' }} onClick={() => setPreviewModal(r)}>Preview</button>
                     <button className="btn btn-primary btn-sm" style={{ flex: 1, fontSize: '11px' }} onClick={() => downloadSingle(r)}>Download</button>
@@ -459,18 +407,6 @@ export default function GeneratePage() {
                 </div>
               ))}
             </div>
-
-            {gensRemaining !== null && gensRemaining === 0 && (
-              <div style={{ marginTop: '32px', background: 'var(--ink)', color: 'var(--paper)', borderRadius: 'var(--radius-lg)', padding: '24px 28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
-                <div>
-                  <p style={{ fontWeight: 700, fontSize: '15px', marginBottom: '4px' }}>You've used your 3 free generations</p>
-                  <p style={{ fontSize: '13px', color: 'rgba(247,246,242,0.5)' }}>Create a free account and add your Gemini API key to keep going. ~$0.07 per run.</p>
-                </div>
-                <Link href="/signup" style={{ textDecoration: 'none', flexShrink: 0 }}>
-                  <button className="btn btn-accent">Create account</button>
-                </Link>
-              </div>
-            )}
           </div>
         )}
 
