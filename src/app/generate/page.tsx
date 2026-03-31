@@ -80,9 +80,17 @@ export default function GeneratePage() {
       form.append('image',   file)
       form.append('formats', JSON.stringify(Array.from(selected)))
 
-      const res  = await fetch('/api/generate', { method: 'POST', body: form })
-      const data = await res.json()
+      const res = await fetch('/api/generate', { method: 'POST', body: form })
       clearInterval(stepInterval)
+
+      let data: { success: boolean; data?: { results: GenerationResult[] }; error?: string }
+      try {
+        data = await res.json()
+      } catch {
+        setError(`Server error (${res.status}). The generation may have timed out — try fewer formats.`)
+        setStage('configure')
+        return
+      }
 
       if (!data.success) {
         setError(data.error || 'Generation failed')
@@ -90,11 +98,11 @@ export default function GeneratePage() {
         return
       }
 
-      setResults(data.data.results)
+      setResults(data.data!.results)
       setStage('results')
     } catch (e) {
       clearInterval(stepInterval)
-      setError('Network error. Please try again.')
+      setError('Network error — check your connection and try again.')
       setStage('configure')
     }
   }

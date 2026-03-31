@@ -35,9 +35,10 @@ export async function recomposeImage(
   filename: string
 ): Promise<GenerationResult[]> {
   const ai = new GoogleGenAI({ apiKey })
-  const results: GenerationResult[] = []
+  const date = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+  const baseName = filename.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9-_]/g, '-').toLowerCase()
 
-  for (const format of targetFormats) {
+  const results = await Promise.all(targetFormats.map(async (format) => {
     const spec = FORMAT_SPECS[format]
 
     const prompt = `Recompose this image into ${spec.label} format (${spec.ratio}, exactly ${spec.w}×${spec.h}px).
@@ -62,12 +63,7 @@ Output a single high-quality image at exactly ${spec.w}×${spec.h}px. Nothing el
         {
           role: 'user',
           parts: [
-            {
-              inlineData: {
-                mimeType: mimeType,
-                data: imageBase64,
-              },
-            },
+            { inlineData: { mimeType, data: imageBase64 } },
             { text: prompt },
           ],
         },
@@ -85,18 +81,15 @@ Output a single high-quality image at exactly ${spec.w}×${spec.h}px. Nothing el
 
     if (!imageData) throw new Error(`No image returned for format ${format}`)
 
-    const date = new Date().toISOString().slice(0, 10).replace(/-/g, '')
-    const baseName = filename.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9-_]/g, '-').toLowerCase()
-
-    results.push({
+    return {
       ratio: format,
       slug: spec.slug,
       px: `${spec.w}×${spec.h}`,
       filename: `${baseName}_${spec.slug}_${date}.png`,
       dataUrl: `data:image/png;base64,${imageData}`,
       method: 'recompose',
-    })
-  }
+    } as GenerationResult
+  }))
 
   return results
 }
