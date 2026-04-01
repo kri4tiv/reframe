@@ -13,15 +13,16 @@ export async function POST(req: NextRequest) {
       return jsonErr('Too many requests. Please slow down.', 429)
     }
 
-    const { imageBase64, mimeType, filename, formats } = await req.json() as {
-      imageBase64: string
-      mimeType:    string
-      filename:    string
-      formats:     Format[]
-    }
+    // Image arrives as raw binary body — no base64 inflation, no FormData overhead.
+    // Metadata (mimeType, filename, formats) comes from URL query params.
+    const url       = new URL(req.url)
+    const mimeType  = url.searchParams.get('mimeType') || ''
+    const filename  = url.searchParams.get('filename') || 'image'
+    const formatsRaw = url.searchParams.get('formats') || '[]'
 
-    if (!imageBase64) return jsonErr('No image provided')
-    if (!mimeType || !filename) return jsonErr('Missing image metadata')
+    if (!mimeType) return jsonErr('No image provided')
+
+    const formats = JSON.parse(formatsRaw) as Format[]
     if (!formats?.length || formats.length > 6) return jsonErr('Invalid formats')
 
     const allowed = ['image/jpeg', 'image/png', 'image/webp']
@@ -29,6 +30,10 @@ export async function POST(req: NextRequest) {
 
     const apiKey = process.env.GEMINI_DRAFT_API_KEY
     if (!apiKey) return jsonErr('Service unavailable', 503)
+
+    const arrayBuffer = await req.arrayBuffer()
+    if (!arrayBuffer.byteLength) return jsonErr('No image provided')
+    const imageBase64 = Buffer.from(arrayBuffer).toString('base64')
 
     const results = await recomposeImage(
       imageBase64,

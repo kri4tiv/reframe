@@ -6,12 +6,13 @@ import { FORMAT_SPECS, type Format, type GenerationResult } from '@/types'
 
 const ALL_FORMATS = Object.keys(FORMAT_SPECS) as Format[]
 
-// Vercel hard-caps request bodies at 4.5MB regardless of Next.js config.
-// Always run through canvas: converts to JPEG, resizes if over 1920px.
-// This guarantees the upload is small enough regardless of source format or size.
+// Vercel hard-caps API route bodies at 4.5MB regardless of Next.js config.
+// We send raw binary (no base64 inflation), so File.size === body bytes.
+// Target: ≤ 4MB binary. Try progressively lower quality until it fits.
 async function compressForUpload(file: File): Promise<File> {
-  const MAX_DIM = 1920
-  const QUALITY = 0.85
+  const MAX_DIM    = 1920
+  const TARGET     = 4 * 1024 * 1024   // 4 MB — safe under Vercel's 4.5 MB hard cap
+  const QUALITIES  = [0.85, 0.70, 0.55, 0.40]
 
   return new Promise((resolve) => {
     const img = new Image()
@@ -31,15 +32,19 @@ async function compressForUpload(file: File): Promise<File> {
       const ctx = canvas.getContext('2d')
       if (!ctx) { resolve(file); return }
       ctx.drawImage(img, 0, 0, width, height)
-      canvas.toBlob(
-        blob => resolve(
-          blob
-            ? new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' })
-            : file
-        ),
-        'image/jpeg',
-        QUALITY
-      )
+
+      let qi = 0
+      const tryNext = () => {
+        canvas.toBlob(blob => {
+          if (!blob) { resolve(file); return }
+          const out = new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' })
+          // Accept if small enough, or if we've exhausted all quality steps
+          if (out.size <= TARGET || qi === QUALITIES.length - 1) { resolve(out); return }
+          qi++
+          tryNext()
+        }, 'image/jpeg', QUALITIES[qi])
+      }
+      tryNext()
     }
     img.src = url
   })
@@ -97,11 +102,11 @@ export default function GeneratePage() {
 
   const handleFile = useCallback(async (f: File) => {
     if (!f.type.startsWith('image/')) { setError('Please upload an image file'); return }
-    if (f.size > 15 * 1024 * 1024)   { setError('Image must be under 15MB'); return }
+    if (f.size > 50 * 1024 * 1024)   { setError('Image must be under 50MB'); return }
     setError('')
     const ready = await compressForUpload(f)
     if (ready.size > 4 * 1024 * 1024) {
-      setError('Could not compress image enough — please use a file under 4MB.')
+      setError('Image could not be compressed to a uploadable size — please try a different image.')
       return
     }
     setFile(ready)
@@ -148,30 +153,25 @@ export default function GeneratePage() {
     }, 900)
 
     try {
-      const b64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onerror = reject
-        reader.onload  = () => resolve((reader.result as string).split(',')[1])
-        reader.readAsDataURL(file)
-      })
-
-      // Safety check: base64 string should be < ~3.5MB to stay under Vercel's 4.5MB JSON body limit
-      if (b64.length > 3.5 * 1024 * 1024) {
-        setError('Image is too large to upload — please use a smaller file.')
+      // Send raw binary — no base64 inflation. File.size === request body bytes.
+      // Vercel's 4.5 MB hard cap means a 4 MB file is always fine.
+      if (file.size > 4 * 1024 * 1024) {
+        // Shouldn't be reachable (compressForUpload + handleFile guard it) but belt-and-suspenders.
+        setError('Image is too large to upload — please try a different image.')
         setStage('configure')
         clearInterval(stepInterval)
         return
       }
 
-      const res = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          imageBase64: b64,
-          mimeType:    file.type,
-          filename:    file.name,
-          formats:     Array.from(selected),
-        }),
+      const params = new URLSearchParams({
+        mimeType: file.type,
+        filename:  file.name,
+        formats:   JSON.stringify(Array.from(selected)),
+      })
+      const res = await fetch(`/api/generate?${params}`, {
+        method:  'POST',
+        headers: { 'Content-Type': file.type },
+        body:    file,
       })
       clearInterval(stepInterval)
 
